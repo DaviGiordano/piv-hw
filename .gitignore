@@ -1,6 +1,11 @@
 # *.ipynb
 /static/
 .vscode
+*.mp4
+*.jpg
+*.png
+*.jpeg
+*.mat
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,django,venv,jupyternotebooks,git
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,django,venv,jupyternotebooks,git
