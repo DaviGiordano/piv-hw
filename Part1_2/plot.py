@@ -2,6 +2,61 @@ from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+def draw_matches_points(img1, img2, src_points, dst_points, max_points=None):
+    """
+    Draw lines between corresponding points from two images, placed side by side.
+
+    Args:
+        img1 (np.ndarray): First image (Grayscale or BGR).
+        img2 (np.ndarray): Second image (Grayscale or BGR).
+        src_points (np.ndarray): Nx2 array of points in the first image.
+        dst_points (np.ndarray): Nx2 array of points in the second image.
+        max_points (int or None): If int, maximum number of points to draw. 
+                                  If None, draw all points.
+    Returns:
+        np.ndarray: Side-by-side visualization of the two images with lines 
+                    connecting matching points.
+    """
+    # Convert to color if needed
+    if len(img1.shape) == 2:
+        img1 = cv2.cvtColor(img1, cv2.COLOR_GRAY2BGR)
+    else:
+        img1 = img1.copy()
+
+    if len(img2.shape) == 2:
+        img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
+    else:
+        img2 = img2.copy()
+
+    # Create a canvas for side-by-side view
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+    canvas_h = max(h1, h2)
+    canvas_w = w1 + w2
+    canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+    canvas[0:h1, 0:w1] = img1
+    canvas[0:h2, w1:w1 + w2] = img2
+
+    # Decide how many points to draw
+    total_points = min(len(src_points), len(dst_points))
+    num_points = total_points if max_points is None else min(total_points, max_points)
+
+    for i in range(num_points):
+        x1, y1 = src_points[i]
+        x2, y2 = dst_points[i]
+        x2_offset = x2 + w1  # shift the second image's x-coord
+
+        color = tuple(np.random.randint(0, 255, size=3).tolist())
+        cv2.circle(canvas, (int(x1), int(y1)), 1, color, -1)
+        cv2.circle(canvas, (int(x2_offset), int(y2)), 1, color, -1)
+        cv2.line(canvas, (int(x1), int(y1)), (int(x2_offset), int(y2)), color, 1)
+
+    return canvas
+
 def visualize_homography_alignment_single(ref_img, node):
     """
     Warp the image to the reference frame using the computed homography

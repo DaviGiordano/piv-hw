@@ -7,7 +7,7 @@ class ImageNode:
         self.descriptors = descriptors
         self.idx = idx
         self.homography = None
-        self.footprint = []
+        self.footprint = [idx]
 
     def __str__(self):
         return f"ImageNode(idx={self.idx}, keypoints_shape={self.keypoints.shape}, descriptors_shape={self.descriptors.shape}, footprint={self.footprint})"
