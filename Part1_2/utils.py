@@ -18,3 +18,7 @@ def resize_keypoint_and_image(keypoint, image, scale_factor):
     resized_image = cv2.resize(image, (0, 0), fx=scale_factor, fy=scale_factor)
     
     return resized_keypoint, resized_image
+
+def print_footprints(image_nodes):
+    for node in image_nodes:
+        print(node.footprint)

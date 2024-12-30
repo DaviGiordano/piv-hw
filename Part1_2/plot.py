@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def draw_matches_points(img1, img2, src_points, dst_points, max_points=None):
     """
     Draw lines between corresponding points from two images, placed side by side.
@@ -15,10 +16,10 @@ def draw_matches_points(img1, img2, src_points, dst_points, max_points=None):
         img2 (np.ndarray): Second image (Grayscale or BGR).
         src_points (np.ndarray): Nx2 array of points in the first image.
         dst_points (np.ndarray): Nx2 array of points in the second image.
-        max_points (int or None): If int, maximum number of points to draw. 
+        max_points (int or None): If int, maximum number of points to draw.
                                   If None, draw all points.
     Returns:
-        np.ndarray: Side-by-side visualization of the two images with lines 
+        np.ndarray: Side-by-side visualization of the two images with lines
                     connecting matching points.
     """
     # Convert to color if needed
@@ -39,7 +40,7 @@ def draw_matches_points(img1, img2, src_points, dst_points, max_points=None):
     canvas_w = w1 + w2
     canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
     canvas[0:h1, 0:w1] = img1
-    canvas[0:h2, w1:w1 + w2] = img2
+    canvas[0:h2, w1 : w1 + w2] = img2
 
     # Decide how many points to draw
     total_points = min(len(src_points), len(dst_points))
@@ -57,6 +58,7 @@ def draw_matches_points(img1, img2, src_points, dst_points, max_points=None):
 
     return canvas
 
+
 def visualize_homography_alignment_single(ref_img, node):
     """
     Warp the image to the reference frame using the computed homography
@@ -71,19 +73,13 @@ def visualize_homography_alignment_single(ref_img, node):
         h_warp, w_warp = node.image.shape[:2]
 
         # Define the corners of the reference and current images
-        corners_ref = np.array([
-            [0, 0],
-            [w_ref, 0],
-            [w_ref, h_ref],
-            [0, h_ref]
-        ], dtype=np.float32).reshape(-1, 1, 2)
+        corners_ref = np.array(
+            [[0, 0], [w_ref, 0], [w_ref, h_ref], [0, h_ref]], dtype=np.float32
+        ).reshape(-1, 1, 2)
 
-        corners_warp = np.array([
-            [0, 0],
-            [w_warp, 0],
-            [w_warp, h_warp],
-            [0, h_warp]
-        ], dtype=np.float32).reshape(-1, 1, 2)
+        corners_warp = np.array(
+            [[0, 0], [w_warp, 0], [w_warp, h_warp], [0, h_warp]], dtype=np.float32
+        ).reshape(-1, 1, 2)
 
         # Warp the corners of the current image to the reference frame
         warped_corners = cv2.perspectiveTransform(corners_warp, H)
@@ -98,18 +94,21 @@ def visualize_homography_alignment_single(ref_img, node):
         translation = [-xmin, -ymin]
 
         # Define the translation matrix with float32 type
-        translation_matrix = np.array([
-            [1, 0, translation[0]],
-            [0, 1, translation[1]],
-            [0, 0, 1]
-        ], dtype=np.float32)
+        translation_matrix = np.array(
+            [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]],
+            dtype=np.float32,
+        )
 
         # Warp the reference image using the translation matrix
-        ref_warped = cv2.warpPerspective(ref_img, translation_matrix, (xmax - xmin, ymax - ymin))
+        ref_warped = cv2.warpPerspective(
+            ref_img, translation_matrix, (xmax - xmin, ymax - ymin)
+        )
 
         # Warp the current image using the combined translation and homography matrices
         combined_homography = translation_matrix @ H  # Matrix multiplication
-        warped_img = cv2.warpPerspective(node.image, combined_homography, (xmax - xmin, ymax - ymin))
+        warped_img = cv2.warpPerspective(
+            node.image, combined_homography, (xmax - xmin, ymax - ymin)
+        )
 
         # Create an overlay by blending the two images
         # Convert images to float for blending
@@ -135,19 +134,19 @@ def visualize_homography_alignment_single(ref_img, node):
         # Plotting
         fig, axes = plt.subplots(1, 3, figsize=(20, 10))
         # Show the reference warped image
-        axes[0].imshow(ref_warped, cmap='gray' if ref_warped.ndim == 2 else None)
+        axes[0].imshow(ref_warped, cmap="gray" if ref_warped.ndim == 2 else None)
         axes[0].set_title("Reference Image (Warped to Canvas)")
-        axes[0].axis('off')
+        axes[0].axis("off")
 
         # Show the warped current image
-        axes[1].imshow(warped_img, cmap='gray' if warped_img.ndim == 2 else None)
+        axes[1].imshow(warped_img, cmap="gray" if warped_img.ndim == 2 else None)
         axes[1].set_title(f"Warped Image (idx={node.idx})")
-        axes[1].axis('off')
+        axes[1].axis("off")
 
         # Show the overlay
-        axes[2].imshow(overlay, cmap='gray' if overlay.ndim == 2 else None)
+        axes[2].imshow(overlay, cmap="gray" if overlay.ndim == 2 else None)
         axes[2].set_title("Overlay (Ref & Warped)")
-        axes[2].axis('off')
+        axes[2].axis("off")
 
         plt.tight_layout()
         plt.show()
@@ -156,92 +155,90 @@ def visualize_homography_alignment_single(ref_img, node):
 def create_canvas_with_images(ref_img, image_nodes):
     """
     Create a canvas with all images warped into the reference frame.
-    
+
     Args:
         ref_img (np.ndarray): The reference image.
         image_nodes (list of ImageNode): List of ImageNode objects, each with an image, keypoints, descriptors, and homography.
-    
+
     Returns:
         canvas (np.ndarray): The final canvas with all images aligned in the reference frame.
     """
     # Step 1: Determine the overall canvas size by transforming the corners of all images
     h_ref, w_ref = ref_img.shape[:2]
-    
+
     # Get the corners of the reference image
-    corners_ref = np.array([
-        [0, 0],
-        [w_ref, 0],
-        [w_ref, h_ref],
-        [0, h_ref]
-    ], dtype=np.float32).reshape(-1, 1, 2)
-    
+    corners_ref = np.array(
+        [[0, 0], [w_ref, 0], [w_ref, h_ref], [0, h_ref]], dtype=np.float32
+    ).reshape(-1, 1, 2)
+
     all_corners = [corners_ref]
-    
+
     for node in image_nodes:
         if node.homography is not None:
             h_img, w_img = node.image.shape[:2]
-            corners_img = np.array([
-                [0, 0],
-                [w_img, 0],
-                [w_img, h_img],
-                [0, h_img]
-            ], dtype=np.float32).reshape(-1, 1, 2)
-            
+            corners_img = np.array(
+                [[0, 0], [w_img, 0], [w_img, h_img], [0, h_img]], dtype=np.float32
+            ).reshape(-1, 1, 2)
+
             # Warp the image corners to the reference frame
             warped_corners = cv2.perspectiveTransform(corners_img, node.homography)
             all_corners.append(warped_corners)
-    
+
     # Combine all the corners to compute the overall canvas size
     all_corners = np.concatenate(all_corners, axis=0)
     [xmin, ymin] = np.int32(all_corners.min(axis=0).ravel() - 0.5)
     [xmax, ymax] = np.int32(all_corners.max(axis=0).ravel() + 0.5)
-    
+
     # Compute the translation to shift everything into positive canvas space
     translation = [-xmin, -ymin]
-    
+
     # Step 2: Create the translation matrix to shift all images
-    translation_matrix = np.array([
-        [1, 0, translation[0]],
-        [0, 1, translation[1]],
-        [0, 0, 1]
-    ], dtype=np.float32)
-    
+    translation_matrix = np.array(
+        [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]], dtype=np.float32
+    )
+
     # Step 3: Warp the reference image into the new canvas
     canvas_size = (xmax - xmin, ymax - ymin)
-    canvas = np.zeros((canvas_size[1], canvas_size[0], 3), dtype=np.uint8)  # Create an empty canvas
-    
+    canvas = np.zeros(
+        (canvas_size[1], canvas_size[0], 3), dtype=np.uint8
+    )  # Create an empty canvas
+
     # Warp the reference image
     ref_warped = cv2.warpPerspective(ref_img, translation_matrix, canvas_size)
-    
+
     # Add the reference image to the canvas
-    mask_ref = (ref_warped > 0).astype(np.uint8)  # Create a mask for the reference image
+    mask_ref = (ref_warped > 0).astype(
+        np.uint8
+    )  # Create a mask for the reference image
     canvas = cv2.add(canvas, ref_warped, mask=mask_ref.max(axis=2))
-    
+
     # Step 4: Warp and blend all other images into the canvas
     for node in image_nodes:
         if node.homography is not None:
             # Combine the translation and the homography for the current image
             combined_homography = translation_matrix @ node.homography
-            
+
             # Warp the image into the canvas
-            warped_img = cv2.warpPerspective(node.image, combined_homography, canvas_size)
-            
+            warped_img = cv2.warpPerspective(
+                node.image, combined_homography, canvas_size
+            )
+
             # Create a mask for the current image
             mask_img = (warped_img > 0).astype(np.uint8)
-            
+
             # Add the warped image to the canvas
-            
+
             # Normalize the images for blending
             canvas_float = canvas.astype(np.float32) / 255.0
             warped_float = warped_img.astype(np.float32) / 255.0
-            
+
             # Blend the images together using maximum intensity projection or simple overlay
             for c in range(3):  # Loop over each channel
                 canvas_channel = canvas_float[:, :, c]
                 warped_channel = warped_float[:, :, c]
-                
+
                 # Blend the two images using the max of both
                 canvas_channel = np.maximum(canvas_channel, warped_channel)
                 canvas[:, :, c] = (canvas_channel * 255).astype(np.uint8)
-    
+
     return canvas

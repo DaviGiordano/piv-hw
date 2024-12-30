@@ -1,3 +1,6 @@
+# Point clouds
+*.ply
+
 # *.ipynb
 /static/
 .vscode
