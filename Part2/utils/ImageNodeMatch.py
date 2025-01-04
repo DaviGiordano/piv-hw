@@ -2,7 +2,7 @@ from scipy.spatial import cKDTree
 import numpy as np
 import cv2
 
-RANSAC_THRESHOLD = 0.001
+RANSAC_THRESHOLD = 5
 
 
 class ImageNodesMatch:
@@ -132,133 +132,65 @@ class ImageNodesMatch:
             best_transform = self._estimate_transform_procrustes(
                 src_inliers, dst_inliers
             )
+        self.src_3d = self.src_3d[best_inliers]
+        self.dst_3d = self.dst_3d[best_inliers]
+        self.src_2d = self.src_2d[best_inliers]
+        self.dst_2d = self.dst_2d[best_inliers]
 
         return best_transform
 
-    def refine_transform_icp(
-        self, max_iterations=30, tolerance=1e-6, distance_outlier_threshold=2.5
-    ):
+    def refine_transform_icp(self, max_iterations=20, tolerance=1e-5):
         """
-        A more robust ICP with outlier rejection:
-          1) Start with the Procrustes-RANSAC transform as the initial guess.
-          2) For each iteration:
-             a) Transform src_3d using the current guess.
-             b) Find nearest neighbors in dst_3d.
-             c) Filter out outliers based on a Z-score or distance threshold.
-             d) Re-run Procrustes with inliers only to get new transform.
-             e) Check convergence.
-        Args:
-            max_iterations (int): Number of iterations to run.
-            tolerance (float): Convergence threshold on transform difference.
-            distance_outlier_threshold (float): Outlier rejection threshold in # of std devs (Z-score).
+        Refine the transform with a simple ICP approach:
+
+        1) Start with the Procrustes transform as an initial guess.
+        2) For each iteration:
+           a) Transform src_3d with the current guess.
+           b) Find nearest neighbors in dst_3d.
+           c) Use Procrustes on the matched pairs to get a new transform.
+           d) Compose the new transform with the old one.
+           e) Check if the update is small enough to stop.
         """
         if self.src_3d is None or self.dst_3d is None:
             raise ValueError("3D points not ready.")
 
-        # Use the Procrustes RANSAC transform as initial guess
+        # Initial guess from Procrustes (or RANSAC)
         transform = self.transform_procrustes_ransac.copy()
 
         src_pts = self.src_3d
         dst_pts = self.dst_3d
-        tree_dst = cKDTree(dst_pts)
+
+        # Build KD-tree for nearest neighbor queries on the destination points
+        dst_kdtree = cKDTree(dst_pts)
 
         for _ in range(max_iterations):
-            # -- 1) Transform src_3d with current guess
+            # 1) Transform src_3d with the current guess
             src_aligned = self.apply_transform(src_pts, transform)
 
-            # -- 2) Nearest neighbors
-            distances, nn_indices = tree_dst.query(src_aligned)
+            # 2) Find nearest neighbors in dst_3d
+            #    distances, idx[i] -> the index of the nearest neighbor for src_aligned[i]
+            distances, nn_indices = dst_kdtree.query(src_aligned)
 
-            # (src_aligned[i], dst_pts[nn_indices[i]]) are pairs
+            # 3) Build matched pairs: (src_aligned[i], dst_pts[idx[i]])
             matched_src = src_aligned
             matched_dst = dst_pts[nn_indices]
 
-            # -- 3) Outlier rejection
-            # We'll remove outlier pairs whose distance is too large
-            dist_mean = np.mean(distances)
-            dist_std = np.std(distances)
-
-            # Outliers if distance > (mean + distance_outlier_threshold * std)
-            threshold_val = dist_mean + distance_outlier_threshold * dist_std
-            inlier_mask = distances < threshold_val
-
-            # Filter
-            matched_src_inliers = matched_src[inlier_mask]
-            matched_dst_inliers = matched_dst[inlier_mask]
-
-            # If too few inliers remain, break or keep old transform
-            if len(matched_src_inliers) < 3:
-                break
-
-            # -- 4) Compute new transform from inliers
+            # 4) Compute new transform from these matched pairs
             new_transform = self._estimate_transform_procrustes(
-                matched_src_inliers, matched_dst_inliers
+                matched_src, matched_dst
             )
 
-            # -- 5) Compose with the old transform
+            # 5) Compose new_transform with the current transform
             old_transform = transform.copy()
-            transform = new_transform @ transform
+            transform = new_transform @ transform  # combine transforms
 
-            # -- 6) Check for convergence
+            # 6) Check if change is small enough to converge
             diff = np.linalg.norm(transform - old_transform)
             if diff < tolerance:
                 break
 
         self.transform_icp = transform
         return transform
-
-    # def refine_transform_icp(self, max_iterations=20, tolerance=1e-5):
-    #     """
-    #     Refine the transform with a simple ICP approach:
-
-    #     1) Start with the Procrustes transform as an initial guess.
-    #     2) For each iteration:
-    #        a) Transform src_3d with the current guess.
-    #        b) Find nearest neighbors in dst_3d.
-    #        c) Use Procrustes on the matched pairs to get a new transform.
-    #        d) Compose the new transform with the old one.
-    #        e) Check if the update is small enough to stop.
-    #     """
-    #     if self.src_3d is None or self.dst_3d is None:
-    #         raise ValueError("3D points not ready.")
-
-    #     # Initial guess from Procrustes (or RANSAC)
-    #     transform = self.transform_procrustes_ransac.copy()
-
-    #     src_pts = self.src_3d
-    #     dst_pts = self.dst_3d
-
-    #     # Build KD-tree for nearest neighbor queries on the destination points
-    #     dst_kdtree = cKDTree(dst_pts)
-
-    #     for _ in range(max_iterations):
-    #         # 1) Transform src_3d with the current guess
-    #         src_aligned = self.apply_transform(src_pts, transform)
-
-    #         # 2) Find nearest neighbors in dst_3d
-    #         #    distances, idx[i] -> the index of the nearest neighbor for src_aligned[i]
-    #         distances, nn_indices = dst_kdtree.query(src_aligned)
-
-    #         # 3) Build matched pairs: (src_aligned[i], dst_pts[idx[i]])
-    #         matched_src = src_aligned
-    #         matched_dst = dst_pts[nn_indices]
-
-    #         # 4) Compute new transform from these matched pairs
-    #         new_transform = self._estimate_transform_procrustes(
-    #             matched_src, matched_dst
-    #         )
-
-    #         # 5) Compose new_transform with the current transform
-    #         old_transform = transform.copy()
-    #         transform = new_transform @ transform  # combine transforms
-
-    #         # 6) Check if change is small enough to converge
-    #         diff = np.linalg.norm(transform - old_transform)
-    #         if diff < tolerance:
-    #             break
-
-    #     self.transform_icp = transform
-    #     return transform
 
     def get_error(self, transform_type="procrustes"):
         """
