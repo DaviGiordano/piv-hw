@@ -1,5 +1,7 @@
 # Point clouds
 *.ply
+*.npy
+*.zip
 
 # *.ipynb
 /static/
