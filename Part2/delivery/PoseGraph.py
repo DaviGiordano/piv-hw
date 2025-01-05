@@ -47,7 +47,7 @@ class PoseGraph:
 
         # Build a spanning tree incrementally
         while remaining:
-            print(f"{remaining} nodes remaining")
+            print(f"Node(s) {remaining} remaining")
             for node1_idx, node2_idx, transform, err in self.edges:
                 # If this edge connects a visited node to an unvisited node
 
