@@ -7,8 +7,6 @@ import open3d as o3d
 import os
 import numpy as np
 
-MIN_CONF = 0.7
-
 
 def parse_cams_info(cams_info_raw):
     cams_info = []
