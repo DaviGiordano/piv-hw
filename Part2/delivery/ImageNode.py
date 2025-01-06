@@ -91,7 +91,7 @@ class ImageNode:
                 filtered_kpts.append(kp)
                 filtered_desc.append(desc)
 
-        # Convert filtered_desc back to a NumPy array if it was originally one
+        # Convert filtered_desc back to a NumPy array
         if len(filtered_desc) > 0:
             filtered_desc = np.vstack(filtered_desc)
         else:

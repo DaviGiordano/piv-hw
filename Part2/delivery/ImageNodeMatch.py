@@ -57,9 +57,6 @@ class ImageNodesMatch:
         Assumes the node1/node2.keypoints & descriptors are already filtered
         if needed (so 'matches' aligns with these filtered sets).
         """
-        # 1) Convert all node1's and node2's keypoints to 3D
-
-        # 2) Collect matching 3D points
         src_3d = []
         dst_3d = []
         for m in self.matches:
@@ -85,7 +82,7 @@ class ImageNodesMatch:
         self, max_iterations=1000, sample_size=3, inlier_threshold=RANSAC_THRESHOLD
     ):
         """
-        Compute a robust Procrustes transform using RANSAC on 3D-3D correspondences.
+        Compute Procrustes transform using RANSAC on 3D-3D correspondences.
         """
         if self.src_3d is None or self.dst_3d is None:
             raise ValueError("3D points not ready.")
@@ -104,17 +101,17 @@ class ImageNodesMatch:
         best_inliers = np.zeros(n_points, dtype=bool)
 
         for _ in range(max_iterations):
-            # 1) Randomly sample 'sample_size' correspondences
+            # Sample
             indices = np.random.choice(n_points, sample_size, replace=False)
             src_sample = src_3d[indices]
             dst_sample = dst_3d[indices]
 
-            # 2) Estimate transform from the sample
+            # Estimate transform
             transform_candidate = self._estimate_transform_procrustes(
                 src_sample, dst_sample
             )
 
-            # 3) Count inliers
+            # Get inliers
             inliers_mask = self._compute_inliers(
                 src_3d, dst_3d, transform_candidate, inlier_threshold
             )
@@ -125,7 +122,7 @@ class ImageNodesMatch:
                 best_transform = transform_candidate
                 best_inliers = inliers_mask
 
-        # (Optional) Refine using all inliers from the best model
+        # Compute transform with most amm of inliers
         if best_inlier_count > 0:
             src_inliers = src_3d[best_inliers]
             dst_inliers = dst_3d[best_inliers]
@@ -141,50 +138,39 @@ class ImageNodesMatch:
 
     def refine_transform_icp(self, max_iterations=20, tolerance=1e-5):
         """
-        Refine the transform with a simple ICP approach:
-
-        1) Start with the Procrustes transform as an initial guess.
-        2) For each iteration:
-           a) Transform src_3d with the current guess.
-           b) Find nearest neighbors in dst_3d.
-           c) Use Procrustes on the matched pairs to get a new transform.
-           d) Compose the new transform with the old one.
-           e) Check if the update is small enough to stop.
+        Refine transform with ICP
         """
         if self.src_3d is None or self.dst_3d is None:
             raise ValueError("3D points not ready.")
 
-        # Initial guess from Procrustes (or RANSAC)
         transform = self.transform_procrustes_ransac.copy()
 
         src_pts = self.src_3d
         dst_pts = self.dst_3d
 
-        # Build KD-tree for nearest neighbor queries on the destination points
         dst_kdtree = cKDTree(dst_pts)
 
         for _ in range(max_iterations):
-            # 1) Transform src_3d with the current guess
             src_aligned = self.apply_transform(src_pts, transform)
 
-            # 2) Find nearest neighbors in dst_3d
-            #    distances, idx[i] -> the index of the nearest neighbor for src_aligned[i]
+            # Distances, idx[i] -> the index of the nearest neighbor for src_aligned[i]
             distances, nn_indices = dst_kdtree.query(src_aligned)
 
-            # 3) Build matched pairs: (src_aligned[i], dst_pts[idx[i]])
+            # Matched pairs (src_aligned[i], dst_pts[idx[i]])
             matched_src = src_aligned
             matched_dst = dst_pts[nn_indices]
 
-            # 4) Compute new transform from these matched pairs
+            # Compute new transform from matched pairs
             new_transform = self._estimate_transform_procrustes(
                 matched_src, matched_dst
             )
 
-            # 5) Compose new_transform with the current transform
+            # Compose transforms
+            # (note that new_trasnform goes from src_aligned to dst)
             old_transform = transform.copy()
             transform = new_transform @ transform  # combine transforms
 
-            # 6) Check if change is small enough to converge
+            # Check if converged
             diff = np.linalg.norm(transform - old_transform)
             if diff < tolerance:
                 break
