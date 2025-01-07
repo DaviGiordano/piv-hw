@@ -1,19 +1,8 @@
-import cv2
 from scipy.io import loadmat
 from pathlib import Path
 from PIL import Image
 import numpy as np
 from ImageNode import ImageNode
-
-# SCALE_FACTOR = 0.5
-
-
-# def resize_keypoint_and_image(keypoint, image, scale_factor):
-
-#     resized_keypoint = keypoint * scale_factor
-#     resized_image = cv2.resize(image, (0, 0), fx=scale_factor, fy=scale_factor)
-
-#     return resized_keypoint, resized_image
 
 
 def parse_yolo(yolo_fpath):

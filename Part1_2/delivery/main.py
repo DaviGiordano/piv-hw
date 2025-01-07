@@ -1,14 +1,7 @@
 import argparse
 import logging
-import os
 from pathlib import Path
-import cv2
-from matplotlib import pyplot as plt
-import numpy as np
-import scipy.io as sio
 
-from ImageNode import ImageNode
-from plot import create_canvas_with_images
 from save_results import save_homographies_and_yolo
 from load_data import process_dir_pairs, load_reference_node
 from thresholds import (
@@ -114,19 +107,6 @@ def main():
 
     # 9) Save results (homographies + transformed YOLO data)
     save_homographies_and_yolo(image_nodes)
-
-    # 10) Save each warped image using the ImageNode method
-    for node in image_nodes:
-        warped_image = node.get_warped_image_with_yolo()
-        if warped_image is not None and node.output_path is not None:
-            out_path = node.output_path / f"warped_{node.idx}.jpg"
-            plt.imsave(str(out_path), warped_image)
-
-    # 11) Save the final canvas
-    final_canvas = create_canvas_with_images(ref_node.image, image_nodes)
-    if input_output_pairs:
-        canvas_out = input_output_pairs[0][1] / "final_canvas.jpg"
-        plt.imsave(str(canvas_out), final_canvas)
 
     logging.info("Processing complete! Results saved.")
 
