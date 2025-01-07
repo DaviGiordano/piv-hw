@@ -17,10 +17,13 @@ def parse_yolo(yolo_fpath):
     """
     if yolo_fpath:
         yolo_data = loadmat(yolo_fpath)
+        first_key = list(
+            yolo_data.keys() - {"__header__", "__version__", "__globals__"}
+        )[0]
         yolo_dict = {
-            "id": yolo_data["id"],
-            "class": yolo_data["class"],
-            "xyxy": yolo_data["xyxy"],
+            "id": yolo_data[first_key]["id"][0][0],
+            "class": yolo_data[first_key]["class"][0][0],
+            "xyxy": yolo_data[first_key]["xyxy"][0][0],
         }
         return yolo_dict
     else:
