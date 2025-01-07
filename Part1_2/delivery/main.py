@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 import cv2
+from matplotlib import pyplot as plt
 import numpy as np
 import scipy.io as sio
 
@@ -80,7 +81,9 @@ def main():
         node.image_num = i
 
     # 4) Compute thresholds
-    max_desc_dist = max_descriptor_distance_threshold_numpy(image_nodes, percentile=90)
+    max_desc_dist = max_descriptor_distance_threshold_numpy(
+        image_nodes, distance_threshold_percentile=90
+    )
     logging.info(f"Max descriptor distance (p={90}): {round(max_desc_dist, 4)}")
 
     min_inliers_threshold = compute_min_inliers_threshold(image_nodes, max_desc_dist)
@@ -117,13 +120,13 @@ def main():
         warped_image = node.get_warped_image_with_yolo()
         if warped_image is not None and node.output_path is not None:
             out_path = node.output_path / f"warped_{node.idx}.jpg"
-            cv2.imwrite(str(out_path), warped_image)
+            plt.imsave(str(out_path), warped_image)
 
     # 11) Save the final canvas
     final_canvas = create_canvas_with_images(ref_node.image, image_nodes)
     if input_output_pairs:
         canvas_out = input_output_pairs[0][1] / "final_canvas.jpg"
-        cv2.imwrite(str(canvas_out), final_canvas)
+        plt.imsave(str(canvas_out), final_canvas)
 
     logging.info("Processing complete! Results saved.")
 
