@@ -27,6 +27,9 @@ def save_homographies_and_yolo(image_nodes):
 
         # 2) Save transformed YOLO detections in individual files
         for i, node in enumerate(nodes):
-            fname = f"yolooutput_{node.idx.split('_')[-1]}.mat"
+            fname = f"yolooutput_{int(node.idx.split('_')[-1]):04d}.mat"
             out_path = os.path.join(out_dir, fname)
-            sio.savemat(out_path, node.yolo_transformed)
+            if node.yolo_transformed:
+                sio.savemat(out_path, node.yolo_transformed)
+            else:
+                print(f"Node {node.idx} has no yolo")
