@@ -31,5 +31,3 @@ def save_homographies_and_yolo(image_nodes):
             out_path = os.path.join(out_dir, fname)
             if node.yolo_transformed:
                 sio.savemat(out_path, node.yolo_transformed)
-            else:
-                print(f"Node {node.idx} has no yolo")
